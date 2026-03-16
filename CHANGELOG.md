@@ -1,5 +1,11 @@
 # chrome-mute-tab
 
+## 0.2.1
+
+### Patch Changes
+
+- 92a0d04: Add test suite with Bun test runner using happy-dom for Chrome extension unit tests
+
 ## 0.2.0
 
 ### Minor Changes
