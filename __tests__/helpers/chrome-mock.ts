@@ -181,6 +181,7 @@ const chromeMock = {
     },
     sendMessage: (message: unknown) => {
       mockCalls.runtime.sendMessage.push(message);
+      return Promise.resolve();
     },
     ContextType: {
       OFFSCREEN_DOCUMENT: "OFFSCREEN_DOCUMENT",
@@ -218,15 +219,15 @@ const chromeMock = {
     onRemoved: mockEvents.tabs.onRemoved,
     get: (tabId: number) => {
       mockCalls.tabs.get.push(tabId);
-      return mockConfig.tabs.getResult as chrome.tabs.Tab;
+      return Promise.resolve(mockConfig.tabs.getResult as chrome.tabs.Tab);
     },
     update: (tabId: number, props: chrome.tabs.UpdateProperties) => {
       mockCalls.tabs.update.push([tabId, props]);
-      return mockConfig.tabs.getResult as chrome.tabs.Tab;
+      return Promise.resolve(mockConfig.tabs.getResult as chrome.tabs.Tab);
     },
     query: (queryInfo: chrome.tabs.QueryInfo) => {
       mockCalls.tabs.query.push(queryInfo);
-      return mockConfig.tabs.queryResult as chrome.tabs.Tab[];
+      return Promise.resolve(mockConfig.tabs.queryResult as chrome.tabs.Tab[]);
     },
     sendMessage: (tabId: number, message: unknown) => {
       mockCalls.tabs.sendMessage.push([tabId, message]);
@@ -250,6 +251,7 @@ const chromeMock = {
   offscreen: {
     createDocument: (params: chrome.offscreen.CreateParameters) => {
       mockCalls.offscreen.createDocument.push(params);
+      return Promise.resolve();
     },
     Reason: {
       MATCH_MEDIA: "MATCH_MEDIA",

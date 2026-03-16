@@ -241,8 +241,12 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 });
 
 // Handle messages from offscreen document
-chrome.runtime.onMessage.addListener((message: InboundServiceWorkerMessage) => {
-  if (message.type === "DARK_MODE_RESPONSE") {
-    chrome.storage.session.set({ [STORAGE_KEY_DARK_MODE]: message.isDark });
+chrome.runtime.onMessage.addListener(
+  async (message: InboundServiceWorkerMessage) => {
+    if (message.type === "DARK_MODE_RESPONSE") {
+      await chrome.storage.session.set({
+        [STORAGE_KEY_DARK_MODE]: message.isDark,
+      });
+    }
   }
-});
+);

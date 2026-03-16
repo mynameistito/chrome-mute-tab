@@ -239,7 +239,8 @@ describe("sendMuteToContentScript", () => {
 
   test("silently ignores rejection", async () => {
     mockConfig.tabs.sendMessageShouldReject = true;
-    await sendMuteToContentScript(3, true);
+    // ensure no error thrown when sendMessage rejects
+    expect(await sendMuteToContentScript(3, true)).toBeUndefined();
   });
 });
 
