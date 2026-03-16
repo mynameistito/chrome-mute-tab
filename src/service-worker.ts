@@ -12,41 +12,44 @@ import type { InboundServiceWorkerMessage } from "./types/messages.ts";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type MutedTabsMap = Record<number, boolean>;
+export type MutedTabsMap = Record<number, boolean>;
 
 // ── Storage helpers ────────────────────────────────────────────────────────
 
-async function getMutedTabs(): Promise<MutedTabsMap> {
+export async function getMutedTabs(): Promise<MutedTabsMap> {
   const result = await chrome.storage.session.get(STORAGE_KEY_MUTED_TABS);
   const raw = result[STORAGE_KEY_MUTED_TABS];
   return typeof raw === "object" && raw !== null ? (raw as MutedTabsMap) : {};
 }
 
-async function setTabMuted(tabId: number, muted: boolean): Promise<void> {
+export async function setTabMuted(
+  tabId: number,
+  muted: boolean
+): Promise<void> {
   const mutedTabs = await getMutedTabs();
   mutedTabs[tabId] = muted;
   await chrome.storage.session.set({ [STORAGE_KEY_MUTED_TABS]: mutedTabs });
 }
 
-async function removeTabFromStorage(tabId: number): Promise<void> {
+export async function removeTabFromStorage(tabId: number): Promise<void> {
   const mutedTabs = await getMutedTabs();
   delete mutedTabs[tabId];
   await chrome.storage.session.set({ [STORAGE_KEY_MUTED_TABS]: mutedTabs });
 }
 
-async function isTabMuted(tabId: number): Promise<boolean> {
+export async function isTabMuted(tabId: number): Promise<boolean> {
   const mutedTabs = await getMutedTabs();
   return mutedTabs[tabId] === true;
 }
 
-async function getIsDarkMode(): Promise<boolean> {
+export async function getIsDarkMode(): Promise<boolean> {
   const result = await chrome.storage.session.get(STORAGE_KEY_DARK_MODE);
   return result[STORAGE_KEY_DARK_MODE] === true;
 }
 
 // ── Badge & icon ───────────────────────────────────────────────────────────
 
-async function updateBadgeAndIcon(
+export async function updateBadgeAndIcon(
   tabId: number,
   muted: boolean
 ): Promise<void> {
@@ -92,7 +95,7 @@ async function updateBadgeAndIcon(
 
 // ── Content script messaging ───────────────────────────────────────────────
 
-async function sendMuteToContentScript(
+export async function sendMuteToContentScript(
   tabId: number,
   muted: boolean
 ): Promise<void> {
@@ -105,7 +108,7 @@ async function sendMuteToContentScript(
 
 // ── Core toggle logic ──────────────────────────────────────────────────────
 
-async function toggleMuteTab(tabId: number): Promise<void> {
+export async function toggleMuteTab(tabId: number): Promise<void> {
   const tab = await chrome.tabs.get(tabId);
   const currentlyMuted = tab.mutedInfo?.muted ?? false;
   const newMuted = !currentlyMuted;
@@ -116,14 +119,14 @@ async function toggleMuteTab(tabId: number): Promise<void> {
   await updateBadgeAndIcon(tabId, newMuted);
 }
 
-async function toggleMuteActiveTab(): Promise<void> {
+export async function toggleMuteActiveTab(): Promise<void> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab?.id != null) {
     await toggleMuteTab(tab.id);
   }
 }
 
-async function muteAllTabs(): Promise<void> {
+export async function muteAllTabs(): Promise<void> {
   const tabs = await chrome.tabs.query({});
   const validTabs = tabs.filter(
     (tab): tab is chrome.tabs.Tab & { id: number } => tab.id != null
@@ -147,7 +150,7 @@ async function muteAllTabs(): Promise<void> {
 
 // ── Offscreen document ─────────────────────────────────────────────────────
 
-async function ensureOffscreenDocument(): Promise<void> {
+export async function ensureOffscreenDocument(): Promise<void> {
   const existingContexts = await chrome.runtime.getContexts({
     contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
   });
