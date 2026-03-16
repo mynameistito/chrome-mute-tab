@@ -14,6 +14,14 @@ import {
   updateBadgeAndIcon,
 } from "../src/service-worker.ts";
 import {
+  BADGE_COLOR_MUTED,
+  BADGE_COLOR_UNMUTED,
+  BADGE_MUTED,
+  BADGE_UNMUTED,
+  CONTEXT_MENU_MUTE_ALL,
+  CONTEXT_MENU_TOGGLE_ID,
+} from "../src/shared/constants.ts";
+import {
   mockCalls,
   mockConfig,
   mockEvents,
@@ -153,7 +161,7 @@ describe("updateBadgeAndIcon", () => {
     await updateBadgeAndIcon(1, true);
     expect(mockCalls.action.setBadgeText).toContainEqual({
       tabId: 1,
-      text: "M",
+      text: BADGE_MUTED,
     });
   });
 
@@ -161,7 +169,7 @@ describe("updateBadgeAndIcon", () => {
     await updateBadgeAndIcon(1, false);
     expect(mockCalls.action.setBadgeText).toContainEqual({
       tabId: 1,
-      text: "",
+      text: BADGE_UNMUTED,
     });
   });
 
@@ -169,7 +177,7 @@ describe("updateBadgeAndIcon", () => {
     await updateBadgeAndIcon(1, true);
     expect(mockCalls.action.setBadgeBackgroundColor).toContainEqual({
       tabId: 1,
-      color: "#E53E3E",
+      color: BADGE_COLOR_MUTED,
     });
   });
 
@@ -177,12 +185,13 @@ describe("updateBadgeAndIcon", () => {
     await updateBadgeAndIcon(1, false);
     expect(mockCalls.action.setBadgeBackgroundColor).toContainEqual({
       tabId: 1,
-      color: "#38A169",
+      color: BADGE_COLOR_UNMUTED,
     });
   });
 
   test("uses muted-light icon paths in light mode when muted", async () => {
     await updateBadgeAndIcon(1, true);
+    expect(mockCalls.action.setIcon.length).toBeGreaterThan(0);
     const call = mockCalls.action.setIcon[0] as chrome.action.TabIconDetails;
     expect((call.path as Record<string, string>)["16"]).toContain(
       "muted-light"
@@ -192,6 +201,7 @@ describe("updateBadgeAndIcon", () => {
   test("uses unmuted-dark icon paths in dark mode when unmuted", async () => {
     await chrome.storage.session.set({ isDarkMode: true });
     await updateBadgeAndIcon(1, false);
+    expect(mockCalls.action.setIcon.length).toBeGreaterThan(0);
     const call = mockCalls.action.setIcon[0] as chrome.action.TabIconDetails;
     expect((call.path as Record<string, string>)["16"]).toContain(
       "unmuted-dark"
@@ -354,8 +364,8 @@ describe("runtime.onInstalled listener", () => {
       reason: "install" as chrome.runtime.OnInstalledReason,
     });
     const ids = mockCalls.contextMenus.create.map((c) => c.id);
-    expect(ids).toContain("mute-tab");
-    expect(ids).toContain("mute-all-tabs");
+    expect(ids).toContain(CONTEXT_MENU_TOGGLE_ID);
+    expect(ids).toContain(CONTEXT_MENU_MUTE_ALL);
   });
 });
 
@@ -387,7 +397,7 @@ describe("contextMenus.onClicked listener", () => {
     mockConfig.tabs.queryResult = [{ id: 9, mutedInfo: { muted: false } }];
     mockConfig.tabs.getResult = { id: 9, mutedInfo: { muted: false } };
     await mockEvents.contextMenus.onClicked.fire({
-      menuItemId: "mute-tab",
+      menuItemId: CONTEXT_MENU_TOGGLE_ID,
     } as chrome.contextMenus.OnClickData);
     expect(mockCalls.tabs.update.length).toBeGreaterThan(0);
   });
@@ -398,7 +408,7 @@ describe("contextMenus.onClicked listener", () => {
       { id: 2, mutedInfo: { muted: false } },
     ];
     await mockEvents.contextMenus.onClicked.fire({
-      menuItemId: "mute-all-tabs",
+      menuItemId: CONTEXT_MENU_MUTE_ALL,
     } as chrome.contextMenus.OnClickData);
     expect(mockCalls.tabs.update.length).toBe(2);
   });
@@ -417,7 +427,7 @@ describe("tabs.onActivated listener", () => {
     await mockEvents.tabs.onActivated.fire({ tabId: 10, windowId: 1 });
     expect(mockCalls.action.setBadgeText).toContainEqual({
       tabId: 10,
-      text: "M",
+      text: BADGE_MUTED,
     });
   });
 });

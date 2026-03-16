@@ -7,6 +7,14 @@ import { Window as HappyWindow } from "happy-dom";
 
 const happyWindow = new HappyWindow({ url: "https://localhost/" });
 
+// happy-dom v20 Window doesn't expose native JS globals that its own SelectorParser
+// accesses via this.window.SyntaxError / TypeError etc. Patch them in.
+(happyWindow as unknown as Record<string, unknown>).SyntaxError = SyntaxError;
+(happyWindow as unknown as Record<string, unknown>).TypeError = TypeError;
+(happyWindow as unknown as Record<string, unknown>).RangeError = RangeError;
+(happyWindow as unknown as Record<string, unknown>).Error = Error;
+(happyWindow as unknown as Record<string, unknown>).DOMException = DOMException;
+
 // Assign all DOM globals needed by source modules and tests
 const g = globalThis as Record<string, unknown>;
 g.window = happyWindow;

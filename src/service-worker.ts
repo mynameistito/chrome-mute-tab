@@ -1,9 +1,13 @@
 import {
+  BADGE_COLOR_MUTED,
+  BADGE_COLOR_UNMUTED,
   BADGE_MUTED,
   BADGE_UNMUTED,
   COMMAND_TOGGLE_MUTE,
   CONTEXT_MENU_MUTE_ALL,
   CONTEXT_MENU_TOGGLE_ID,
+  ICON_BASE,
+  ICON_SIZES,
   OFFSCREEN_URL,
   STORAGE_KEY_DARK_MODE,
   STORAGE_KEY_MUTED_TABS,
@@ -16,25 +20,39 @@ export type MutedTabsMap = Record<number, boolean>;
 
 // ── Storage helpers ────────────────────────────────────────────────────────
 
+// Serialize all read-modify-write operations on STORAGE_KEY_MUTED_TABS to
+// prevent concurrent calls from dropping each other's updates.
+let storageLock: Promise<void> = Promise.resolve();
+
+function withStorageLock(fn: () => Promise<void>): Promise<void> {
+  const next = storageLock.then(fn);
+  storageLock = next.then(
+    () => undefined,
+    () => undefined
+  );
+  return next;
+}
+
 export async function getMutedTabs(): Promise<MutedTabsMap> {
   const result = await chrome.storage.session.get(STORAGE_KEY_MUTED_TABS);
   const raw = result[STORAGE_KEY_MUTED_TABS];
   return typeof raw === "object" && raw !== null ? (raw as MutedTabsMap) : {};
 }
 
-export async function setTabMuted(
-  tabId: number,
-  muted: boolean
-): Promise<void> {
-  const mutedTabs = await getMutedTabs();
-  mutedTabs[tabId] = muted;
-  await chrome.storage.session.set({ [STORAGE_KEY_MUTED_TABS]: mutedTabs });
+export function setTabMuted(tabId: number, muted: boolean): Promise<void> {
+  return withStorageLock(async () => {
+    const mutedTabs = await getMutedTabs();
+    mutedTabs[tabId] = muted;
+    await chrome.storage.session.set({ [STORAGE_KEY_MUTED_TABS]: mutedTabs });
+  });
 }
 
-export async function removeTabFromStorage(tabId: number): Promise<void> {
-  const mutedTabs = await getMutedTabs();
-  delete mutedTabs[tabId];
-  await chrome.storage.session.set({ [STORAGE_KEY_MUTED_TABS]: mutedTabs });
+export function removeTabFromStorage(tabId: number): Promise<void> {
+  return withStorageLock(async () => {
+    const mutedTabs = await getMutedTabs();
+    delete mutedTabs[tabId];
+    await chrome.storage.session.set({ [STORAGE_KEY_MUTED_TABS]: mutedTabs });
+  });
 }
 
 export async function isTabMuted(tabId: number): Promise<boolean> {
@@ -48,6 +66,21 @@ export async function getIsDarkMode(): Promise<boolean> {
 }
 
 // ── Badge & icon ───────────────────────────────────────────────────────────
+
+function makeIconPaths(variant: string, theme: string): Record<string, string> {
+  return Object.fromEntries(
+    ICON_SIZES.map((size) => [
+      size,
+      `${ICON_BASE}-${size}-${variant}-${theme}.png`,
+    ])
+  );
+}
+
+function makeFallbackIconPaths(): Record<string, string> {
+  return Object.fromEntries(
+    ICON_SIZES.map((size) => [size, `${ICON_BASE}-${size}.png`])
+  );
+}
 
 export async function updateBadgeAndIcon(
   tabId: number,
@@ -63,33 +96,14 @@ export async function updateBadgeAndIcon(
   });
   await chrome.action.setBadgeBackgroundColor({
     tabId,
-    color: muted ? "#E53E3E" : "#38A169",
+    color: muted ? BADGE_COLOR_MUTED : BADGE_COLOR_UNMUTED,
   });
 
   // Use muted/unmuted icons if they exist; fall back to base icons
-  const iconBase = "icons/icon";
-  const iconSuffix = `-${variant}-${theme}`;
-  const iconBaseFallback = "icons/icon";
-
   try {
-    await chrome.action.setIcon({
-      tabId,
-      path: {
-        "16": `${iconBase}-16${iconSuffix}.png`,
-        "48": `${iconBase}-48${iconSuffix}.png`,
-        "128": `${iconBase}-128${iconSuffix}.png`,
-      },
-    });
+    await chrome.action.setIcon({ tabId, path: makeIconPaths(variant, theme) });
   } catch {
-    // Variant icons don't exist yet; use base icons
-    await chrome.action.setIcon({
-      tabId,
-      path: {
-        "16": `${iconBaseFallback}-16.png`,
-        "48": `${iconBaseFallback}-48.png`,
-        "128": `${iconBaseFallback}-128.png`,
-      },
-    });
+    await chrome.action.setIcon({ tabId, path: makeFallbackIconPaths() });
   }
 }
 
