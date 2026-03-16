@@ -106,8 +106,7 @@ async function sendMuteToContentScript(
 // ── Core toggle logic ──────────────────────────────────────────────────────
 
 async function toggleMuteTab(tabId: number): Promise<void> {
-  const tab = await chrome.tabs.get(tabId);
-  const currentlyMuted = tab.mutedInfo?.muted ?? false;
+  const currentlyMuted = await isTabMuted(tabId);
   const newMuted = !currentlyMuted;
 
   await chrome.tabs.update(tabId, { muted: newMuted });
