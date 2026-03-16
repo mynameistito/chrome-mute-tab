@@ -1,0 +1,28 @@
+{
+  "name": "chrome-mute-tab",
+  "version": "0.1.0",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@biomejs/biome": "2.4.7",
+    "@changesets/cli": "^2.30.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/bun": "latest",
+    "@types/chrome": "^0.1.37",
+    "lefthook": "^2.1.4",
+    "ultracite": "7.3.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "build:watch": "bun --watch run scripts/build.ts",
+    "check": "ultracite check",
+    "fix": "ultracite fix",
+    "prepare": "lefthook install",
+    "typecheck": "tsc --noEmit",
+    "release": "bun run scripts/release.ts"
+  }
+}
