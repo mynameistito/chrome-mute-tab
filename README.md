@@ -1,6 +1,23 @@
 # Mute Tab
 
-A Chrome extension that properly mutes tabs — including YouTube, which ignores Chrome's native tab mute.
+> Silence any tab instantly — with real YouTube support.
+
+![Social Preview](assets/social-preview.png)
+
+---
+
+## Table of Contents
+
+- [Why This Exists](#why-this-exists)
+- [Features](#features)
+- [Installation](#installation)
+- [Keyboard Shortcut](#keyboard-shortcut)
+- [Development](#development)
+- [How It Works](#how-it-works)
+- [Permissions](#permissions)
+- [License](#license)
+
+---
 
 ## Why This Exists
 
@@ -10,7 +27,7 @@ Chrome's built-in tab mute (`chrome.tabs.update({ muted: true })`) silences a ta
 
 - **Mute any tab** — click the toolbar icon or press `Alt+Shift+M`
 - **YouTube support** — directly mutes `<video>` elements, surviving SPA navigation and page reloads
-- **Mute All Tabs** — right-click the toolbar icon → "Mute All Tabs"
+- **Mute all tabs** — right-click the toolbar icon → "Mute All Tabs"
 - **Visual badge** — "M" badge appears on the icon when a tab is muted
 - **Dark mode aware** — icon adapts to system light/dark preference
 - **Persistent state** — muted tabs stay muted across navigation within the same session
@@ -31,7 +48,7 @@ Then load the extension in Chrome:
 3. Click **Load unpacked**
 4. Select the `dist/` folder
 
-### Keyboard Shortcut
+## Keyboard Shortcut
 
 `Alt+Shift+M` toggles mute on the active tab. You can customise this at `chrome://extensions/shortcuts`.
 

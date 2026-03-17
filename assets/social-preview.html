@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1280">
+    <title>Mute Tab — Social Preview</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    >
+    <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      padding: 0;
+      margin: 0;
+    }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text-primary: #f0f6fc;
+      --text-secondary: #8b949e;
+      --text-body: #c9d1d9;
+      --red: #e53e3e;
+      --green: #38a169;
+    }
+
+    html,
+    body {
+      width: 1280px;
+      height: 640px;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    /* dot-grid canvas */
+    .canvas {
+      position: relative;
+      width: 1280px;
+      height: 640px;
+      background-color: var(--bg);
+      background-image: radial-gradient(circle, #1e2530 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    /* inset frame */
+    .frame {
+      position: absolute;
+      inset: 40px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+
+    /* main content row */
+    .content {
+      display: flex;
+      flex: 1;
+      gap: 0;
+      align-items: center;
+      padding: 40px 48px;
+    }
+
+    /* ── LEFT: Icon column ── */
+    .col-icon {
+      display: flex;
+      flex-shrink: 0;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+      margin-right: 52px;
+    }
+
+    .icon-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 160px;
+      height: 160px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow:
+        inset 0 0 0 1px rgba(229, 62, 62, 0.15),
+        0 0 32px rgba(229, 62, 62, 0.08);
+    }
+
+    .icon-card svg {
+      width: 96px;
+      height: 96px;
+    }
+
+    .version-badge {
+      padding: 4px 14px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      letter-spacing: 0.02em;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+    }
+
+    /* ── CENTER: Text column ── */
+    .col-text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .eyebrow {
+      margin-bottom: 14px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .accent-bar {
+      width: 56px;
+      height: 3px;
+      margin-bottom: 20px;
+      background: linear-gradient(to right, var(--red), var(--green));
+      border-radius: 2px;
+    }
+
+    .headline {
+      margin-bottom: 16px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 72px;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .tagline {
+      margin-bottom: 32px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.4;
+      color: var(--text-secondary);
+    }
+
+    /* keyboard chips row */
+    .kbd-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .kbd-label {
+      margin-right: 4px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    kbd {
+      padding: 5px 12px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--text-body);
+      background: #21262d;
+      border: 1px solid var(--border);
+      border-bottom-width: 2px;
+      border-radius: 6px;
+      box-shadow: 0 1px 0 var(--border);
+    }
+
+    .kbd-plus {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* ── RIGHT: Features column ── */
+    .col-features {
+      display: flex;
+      flex-shrink: 0;
+      flex-direction: column;
+      gap: 12px;
+      width: 260px;
+      margin-left: 48px;
+    }
+
+    .feature-chip {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 9px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+    }
+
+    .chip-dot {
+      flex-shrink: 0;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .chip-dot--red {
+      background: var(--red);
+    }
+    .chip-dot--green {
+      background: var(--green);
+    }
+
+    .chip-label {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 52px;
+      padding: 0 48px;
+      background: rgba(22, 27, 34, 0.6);
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-left {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .footer-icon {
+      width: 18px;
+      height: 18px;
+    }
+
+    .footer-text {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 13px;
+      color: var(--text-secondary);
+      letter-spacing: 0.01em;
+    }
+
+    .footer-url {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 13px;
+      color: var(--text-secondary);
+      letter-spacing: 0.01em;
+    }
+    </style>
+  </head>
+  <body>
+    <div class="canvas">
+      <div class="frame">
+        <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+        <div class="content">
+          <!-- LEFT: Icon + version -->
+          <div class="col-icon">
+            <div class="icon-card">
+              <svg
+                width="96"
+                height="96"
+                viewBox="0 0 512 512"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <title>Mute Tab icon</title>
+                <g
+                  transform="translate(42.666667, 59.581722)"
+                  fill="#E53E3E"
+                  fill-rule="evenodd"
+                >
+                  <path
+                    d="M47.0849493,-1.42108547e-14 L298.668,251.583611 L304.101001,257.015597 L304.101,257.016 L353.573532,306.488791 C353.573732,306.488458 353.573933,306.488124 353.574133,306.48779 L384.435257,337.348961 L384.434,337.349 L409.751616,362.666662 L379.581717,392.836561 L191.749,205.003 L191.749973,369.105851 L81.0208,283.647505 L7.10542736e-15,283.647505 L7.10542736e-15,112.980838 L80.8957867,112.980838 L91.433,104.688 L16.9150553,30.169894 L47.0849493,-1.42108547e-14 Z M361.298133,28.0146513 C429.037729,103.653701 443.797162,209.394226 405.578884,298.151284 L372.628394,265.201173 C396.498256,194.197542 381.626623,113.228555 328.013013,54.642278 L361.298133,28.0146513 Z M276.912853,95.5237713 C305.539387,127.448193 318.4688,168.293162 315.701304,208.275874 L266.464558,159.040303 C261.641821,146.125608 254.316511,133.919279 244.488548,123.156461 L243.588693,122.182545 L276.912853,95.5237713 Z M191.749973,25.7516113 L191.749,84.3256113 L158.969,51.5456113 L191.749973,25.7516113 Z"
+                  />
+                </g>
+              </svg>
+            </div>
+            <span class="version-badge">v0.2.1</span>
+          </div>
+
+          <!-- CENTER: Text -->
+          <div class="col-text">
+            <p class="eyebrow">Chrome Extension</p>
+            <div class="accent-bar"></div>
+            <h1 class="headline">Mute Tab</h1>
+            <p class="tagline">
+              Silence any tab instantly — with real YouTube support.
+            </p>
+            <div class="kbd-row">
+              <span class="kbd-label">Shortcut</span>
+              <kbd>Alt</kbd>
+              <span class="kbd-plus">+</span>
+              <kbd>Shift</kbd>
+              <span class="kbd-plus">+</span>
+              <kbd>M</kbd>
+            </div>
+          </div>
+
+          <!-- RIGHT: Feature chips -->
+          <div class="col-features">
+            <div class="feature-chip">
+              <span class="chip-dot chip-dot--red"></span>
+              <span class="chip-label">Click or Alt+Shift+M</span>
+            </div>
+            <div class="feature-chip">
+              <span class="chip-dot chip-dot--green"></span>
+              <span class="chip-label">YouTube muting</span>
+            </div>
+            <div class="feature-chip">
+              <span class="chip-dot chip-dot--red"></span>
+              <span class="chip-label">Mute all tabs</span>
+            </div>
+            <div class="feature-chip">
+              <span class="chip-dot chip-dot--green"></span>
+              <span class="chip-label">Visual badge</span>
+            </div>
+            <div class="feature-chip">
+              <span class="chip-dot chip-dot--red"></span>
+              <span class="chip-label">Dark mode aware</span>
+            </div>
+          </div>
+        </div><!-- /content -->
+
+        <!-- ═══════════════ FOOTER ═══════════════ -->
+        <div class="footer">
+          <div class="footer-left">
+            <!-- Chrome SVG icon -->
+            <svg
+              class="footer-icon"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <title>Chrome browser icon</title>
+              <circle cx="12" cy="12" r="10" fill="#4285F4" />
+              <circle cx="12" cy="12" r="4.5" fill="white" />
+              <path
+                d="M12 7.5 A4.5 4.5 0 0 1 16.5 12 L21.7 12 A10 10 0 0 0 2.3 7.5 Z"
+                fill="#EA4335"
+              />
+              <path
+                d="M16.5 12 A4.5 4.5 0 0 1 9.75 15.75 L7.15 20.3 A10 10 0 0 0 21.7 12 Z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M9.75 15.75 A4.5 4.5 0 0 1 7.5 12 A4.5 4.5 0 0 1 12 7.5 L2.3 7.5 A10 10 0 0 0 7.15 20.3 Z"
+                fill="#34A853"
+              />
+            </svg>
+            <span class="footer-text">Chrome Extension</span>
+          </div>
+          <span class="footer-url"
+            >github.com/mynameistito/chrome-mute-tab</span
+          >
+        </div>
+      </div><!-- /frame -->
+    </div><!-- /canvas -->
+  </body>
+</html>
