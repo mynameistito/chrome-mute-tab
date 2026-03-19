@@ -8,11 +8,12 @@ import {
   CONTEXT_MENU_TOGGLE_ID,
   ICON_BASE,
   ICON_SIZES,
-  OFFSCREEN_URL,
   STORAGE_KEY_DARK_MODE,
   STORAGE_KEY_MUTED_TABS,
-} from "./shared/constants.ts";
-import type { InboundServiceWorkerMessage } from "./types/messages.ts";
+} from "@mute-tab/shared/constants";
+import type { InboundServiceWorkerMessage } from "@mute-tab/shared/types/messages";
+
+const OFFSCREEN_URL = "offscreen.html" as const;
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
