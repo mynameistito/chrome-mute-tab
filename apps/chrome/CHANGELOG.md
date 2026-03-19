@@ -1,5 +1,11 @@
 # @mute-tab/chrome
 
+## 0.3.3
+
+### Patch Changes
+
+- @mute-tab/shared@0.3.3
+
 ## 0.3.2
 
 ### Patch Changes

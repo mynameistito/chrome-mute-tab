@@ -1,5 +1,12 @@
 # @mute-tab/firefox
 
+## 0.3.3
+
+### Patch Changes
+
+- d7ec418: Fix Firefox manifest warnings: remove unsupported `service_worker` key (use `scripts` only), bump `strict_min_version` to 140.0 to match when `data_collection_permissions` was introduced on desktop Firefox.
+  - @mute-tab/shared@0.3.3
+
 ## 0.3.2
 
 ### Patch Changes
