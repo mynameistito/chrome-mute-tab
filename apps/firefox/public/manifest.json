@@ -6,7 +6,6 @@
   "permissions": ["activeTab", "tabs", "contextMenus", "storage"],
   "host_permissions": ["*://*.youtube.com/*"],
   "background": {
-    "service_worker": "service-worker.js",
     "scripts": ["service-worker.js"],
     "type": "module"
   },
@@ -40,7 +39,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "mute-tab@mynameistito",
-      "strict_min_version": "128.0",
+      "strict_min_version": "140.0",
       "data_collection_permissions": {
         "required": ["none"]
       }
