@@ -9,7 +9,7 @@
     },
     "typecheck": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**", "tsconfig.json", "../../tsconfig.base.json"]
+      "inputs": ["src/**", "__tests__/**", "tsconfig.json", "../../tsconfig.base.json"]
     },
     "check": {
       "inputs": ["src/**", "__tests__/**", "scripts/**"]
@@ -20,7 +20,6 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "outputs": ["coverage/**"],
       "inputs": ["src/**", "__tests__/**", "bunfig.toml"]
     },
     "test:coverage": {

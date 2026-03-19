@@ -3,7 +3,6 @@
   "compilerOptions": {
     "types": ["chrome", "bun"],
     "paths": {
-      "@mute-tab/shared": ["../../packages/shared/src/constants.ts"],
       "@mute-tab/shared/constants": ["../../packages/shared/src/constants.ts"],
       "@mute-tab/shared/types/messages": [
         "../../packages/shared/src/types/messages.ts"

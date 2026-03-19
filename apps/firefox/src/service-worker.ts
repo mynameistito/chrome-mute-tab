@@ -175,6 +175,13 @@ export function initDarkModeDetection(): void {
 
 // ── Event listeners ────────────────────────────────────────────────────────
 
+// Re-initialize on every service-worker startup so theme state is correct
+// after browser restarts (session storage is cleared on restart).
+// Guard against environments (e.g. tests) where matchMedia is not defined.
+if (typeof matchMedia !== "undefined") {
+  initDarkModeDetection();
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: CONTEXT_MENU_TOGGLE_ID,
@@ -218,15 +225,13 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     return;
   }
 
-  // Re-inject mute state after page load (handles YouTube reloads)
-  if (changeInfo.status === "complete") {
+  const shouldReinject =
+    changeInfo.status === "complete" || changeInfo.url != null;
+  if (shouldReinject) {
     await sendMuteToContentScript(tabId, true);
-    await updateBadgeAndIcon(tabId, true);
   }
-
-  // Re-inject mute state after SPA navigation (handles YouTube pushState)
-  if (changeInfo.url != null) {
-    await sendMuteToContentScript(tabId, true);
+  if (changeInfo.status === "complete") {
+    await updateBadgeAndIcon(tabId, true);
   }
 });
 
