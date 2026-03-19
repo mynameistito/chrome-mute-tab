@@ -20,7 +20,7 @@ const tag = `v${version}`;
 
 const existing = await $`gh release view ${tag}`.nothrow();
 if (existing.exitCode === 0) {
-  console.log(`Release ${tag} already exists - skipping.`);
+  process.stdout.write(`Release ${tag} already exists - skipping.\n`);
   process.exit(0);
 }
 
