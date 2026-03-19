@@ -16,7 +16,7 @@ const chromeZip = `mute-tab-chrome-v${version}.zip`;
 const firefoxZip = `mute-tab-firefox-v${version}.zip`;
 
 await $`rm -f ${chromeZip} ${firefoxZip}`;
-await $`cd apps/chrome/dist && zip -r ../../../${chromeZip} . && cd ../../..`;
-await $`cd apps/firefox/dist && zip -r ../../../${firefoxZip} . && cd ../../..`;
+await $`zip -rj ${chromeZip} apps/chrome/dist`;
+await $`zip -rj ${firefoxZip} apps/firefox/dist`;
 
 await $`gh release create ${tag} ${chromeZip} ${firefoxZip} --title ${tag} --generate-notes`;
