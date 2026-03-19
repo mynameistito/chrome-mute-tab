@@ -1,7 +1,14 @@
 import { $ } from "bun";
-import pkg from "../package.json";
+import chromePkg from "../apps/chrome/package.json";
+import firefoxPkg from "../apps/firefox/package.json";
+import sharedPkg from "../packages/shared/package.json";
 
-const version = pkg.version;
+const versions = [chromePkg.version, firefoxPkg.version, sharedPkg.version];
+if (new Set(versions).size !== 1) {
+  throw new Error(`Package versions are out of sync: ${versions.join(", ")}`);
+}
+
+const version = versions[0];
 const tag = `v${version}`;
 
 const existing = await $`gh release view ${tag}`.nothrow();
