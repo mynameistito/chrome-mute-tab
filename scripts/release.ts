@@ -9,6 +9,11 @@ if (new Set(versions).size !== 1) {
 }
 
 const version = versions[0];
+if (!version) {
+  throw new Error(
+    "Version is undefined — package.json may be missing a version field."
+  );
+}
 const tag = `v${version}`;
 
 const existing = await $`gh release view ${tag}`.nothrow();
