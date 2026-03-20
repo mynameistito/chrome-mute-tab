@@ -85,7 +85,7 @@ cd apps/firefox && bun run build:watch  # rebuild Firefox extension on file chan
 ### Monorepo Structure
 
 ```text
-chrome-mute-tab/
+mute-tab-manager/
 ├── apps/
 │   ├── chrome/          # Chrome MV3 extension (@mute-tab-manager/chrome)
 │   │   ├── src/         # service-worker.ts, offscreen.ts
