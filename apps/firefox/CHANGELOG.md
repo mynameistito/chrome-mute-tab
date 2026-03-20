@@ -1,5 +1,15 @@
 # @mute-tab-manager/firefox
 
+## 0.4.1
+
+### Patch Changes
+
+- 5aded49: Simplify Firefox extension ID to `mute-tab@mynameistito`
+
+  The extension ID in `browser_specific_settings.gecko.id` has been updated from `mute-tab-manager@mynameistito` to `mute-tab@mynameistito` for a cleaner identifier.
+
+  - @mute-tab-manager/shared@0.4.1
+
 ## 0.4.0
 
 ### Minor Changes
