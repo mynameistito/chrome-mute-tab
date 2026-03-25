@@ -29,17 +29,36 @@ g.Event = happyWindow.Event;
 // so the callback fires via queueMicrotask, matching real browser behaviour.
 class TestMutationObserver {
   private readonly _callback: MutationCallback;
+  private readonly _patched: WeakSet<Node> = new WeakSet();
 
   constructor(callback: MutationCallback) {
     this._callback = callback;
   }
 
-  observe(target: Node) {
+  observe(target: Node, options?: MutationObserverInit) {
+    this._patchAppendChild(target);
+
+    if (options?.subtree) {
+      // Patch existing child nodes so descendant appends are observed
+      for (const child of Array.from(target.childNodes)) {
+        if (child.nodeType === 1) {
+          this._patchAppendChild(child);
+        }
+      }
+    }
+  }
+
+  private _patchAppendChild(node: Node) {
+    if (this._patched.has(node)) {
+      return;
+    }
+    this._patched.add(node);
+
     const callback = this._callback;
     const observer = this as unknown as MutationObserver;
-    const origAppendChild = target.appendChild.bind(target);
+    const origAppendChild = node.appendChild.bind(node);
 
-    target.appendChild = <T extends Node>(child: T): T => {
+    node.appendChild = <T extends Node>(child: T): T => {
       const result = origAppendChild(child);
       queueMicrotask(() => {
         callback(
@@ -48,7 +67,7 @@ class TestMutationObserver {
               type: "childList",
               addedNodes: [child] as unknown as NodeList,
               removedNodes: [] as unknown as NodeList,
-              target,
+              target: node,
               attributeName: null,
               attributeNamespace: null,
               nextSibling: null,
@@ -59,6 +78,10 @@ class TestMutationObserver {
           observer
         );
       });
+      // Patch newly added element nodes so their children are also observed
+      if (child.nodeType === 1) {
+        this._patchAppendChild(child);
+      }
       return result;
     };
   }

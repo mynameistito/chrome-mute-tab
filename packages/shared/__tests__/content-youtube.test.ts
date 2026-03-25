@@ -133,6 +133,28 @@ describe("MutationObserver", () => {
     expect(video.muted).toBe(true);
   });
 
+  test("auto-mutes <video> appended to an existing subtree child while muted", async () => {
+    // Container is already in the DOM before muting
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+
+    await mockEvents.runtime.onMessage.fire(
+      { type: "SET_MUTED", muted: true },
+      {} as chrome.runtime.MessageSender,
+      () => {
+        /* noop */
+      }
+    );
+
+    // Append video to the existing child — exercises subtree observation
+    const video = document.createElement("video");
+    container.appendChild(video);
+
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(video.muted).toBe(true);
+  });
+
   test("does NOT auto-mute appended <video> while not muted", async () => {
     const video = document.createElement("video");
     document.body.appendChild(video);
