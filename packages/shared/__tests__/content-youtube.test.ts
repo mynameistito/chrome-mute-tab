@@ -1,24 +1,13 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import {
-  listenerDelta,
-  mockEvents,
-  resetChromeMock,
-  restoreListeners,
-  snapshotListeners,
-} from "./helpers/chrome-mock.ts";
-
-let myListeners: ReturnType<typeof snapshotListeners>;
+import { mockEvents, resetChromeMock } from "./helpers/chrome-mock.ts";
 
 // Import the module once — it registers MutationObserver and event listeners at module level.
 beforeAll(async () => {
-  const before = snapshotListeners();
   await import("../src/content-youtube.ts");
-  myListeners = listenerDelta(before, snapshotListeners());
 });
 
 beforeEach(async () => {
   resetChromeMock();
-  restoreListeners(myListeners);
   document.body.innerHTML = "";
   // Reset isMuted module state to false
   await mockEvents.runtime.onMessage.fire(
@@ -127,28 +116,6 @@ describe("MutationObserver", () => {
     const video = document.createElement("video");
     div.appendChild(video);
     document.body.appendChild(div);
-
-    await new Promise((r) => setTimeout(r, 0));
-
-    expect(video.muted).toBe(true);
-  });
-
-  test("auto-mutes <video> appended to an existing subtree child while muted", async () => {
-    // Container is already in the DOM before muting
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-
-    await mockEvents.runtime.onMessage.fire(
-      { type: "SET_MUTED", muted: true },
-      {} as chrome.runtime.MessageSender,
-      () => {
-        /* noop */
-      }
-    );
-
-    // Append video to the existing child — exercises subtree observation
-    const video = document.createElement("video");
-    container.appendChild(video);
 
     await new Promise((r) => setTimeout(r, 0));
 
