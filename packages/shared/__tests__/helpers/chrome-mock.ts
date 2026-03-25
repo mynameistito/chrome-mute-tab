@@ -19,17 +19,181 @@ const happyWindow = new HappyWindow({ url: "https://localhost/" });
 const g = globalThis as Record<string, unknown>;
 g.window = happyWindow;
 g.document = happyWindow.document;
-g.MutationObserver = happyWindow.MutationObserver;
 g.HTMLElement = happyWindow.HTMLElement;
 g.HTMLVideoElement = happyWindow.HTMLVideoElement;
 g.EventTarget = happyWindow.EventTarget;
 g.Event = happyWindow.Event;
 
-interface MockEvent<TCallback extends (...args: any[]) => any> {
+// Custom MutationObserver mock — happy-dom's implementation doesn't reliably
+// fire callbacks on Linux CI. This patches DOM insertion methods on observed
+// targets so the callback fires via queueMicrotask, matching real browser behaviour.
+//
+// LIMITATIONS:
+// - Only intercepts DOM insertion methods (appendChild, insertBefore, replaceChild,
+//   append, prepend, insertAdjacentElement). Does NOT intercept attribute changes
+//   or characterData mutations.
+// - disconnect() is not implemented because it's never called in this codebase.
+//   If needed in the future, store originals in a Map and restore them.
+class TestMutationObserver {
+  private readonly _callback: MutationCallback;
+  private readonly _patched: WeakSet<Node> = new WeakSet();
+
+  constructor(callback: MutationCallback) {
+    this._callback = callback;
+  }
+
+  observe(target: Node, options?: MutationObserverInit) {
+    this._patchInsertionMethods(target);
+
+    if (options?.subtree) {
+      const walk = (node: Node) => {
+        for (const child of Array.from(node.childNodes)) {
+          if (child.nodeType === 1) {
+            this._patchInsertionMethods(child);
+            walk(child);
+          }
+        }
+      };
+      walk(target);
+    }
+  }
+
+  private _patchInsertionMethods(node: Node) {
+    if (this._patched.has(node)) {
+      return;
+    }
+    this._patched.add(node);
+
+    const callback = this._callback;
+    const observer = this as unknown as MutationObserver;
+
+    const fireCallback = (addedNodes: Node[], removedNodes: Node[] = []) => {
+      queueMicrotask(() => {
+        callback(
+          [
+            {
+              type: "childList",
+              addedNodes: addedNodes as unknown as NodeList,
+              removedNodes: removedNodes as unknown as NodeList,
+              target: node,
+              attributeName: null,
+              attributeNamespace: null,
+              nextSibling: null,
+              previousSibling: null,
+              oldValue: null,
+            } as unknown as MutationRecord,
+          ],
+          observer
+        );
+      });
+    };
+
+    const patchNewSubtree = (node: Node) => {
+      if (node.nodeType === 1) {
+        this._patchInsertionMethods(node);
+        for (const child of Array.from(node.childNodes)) {
+          patchNewSubtree(child);
+        }
+      }
+    };
+
+    // Node methods
+    const origAppendChild = node.appendChild.bind(node);
+    node.appendChild = <T extends Node>(child: T): T => {
+      const result = origAppendChild(child);
+      fireCallback([child]);
+      patchNewSubtree(child);
+      return result;
+    };
+
+    const origInsertBefore = node.insertBefore.bind(node);
+    node.insertBefore = <T extends Node>(child: T, ref: Node | null): T => {
+      const result = origInsertBefore(child, ref);
+      fireCallback([child]);
+      patchNewSubtree(child);
+      return result;
+    };
+
+    const origReplaceChild = node.replaceChild.bind(node);
+    node.replaceChild = <T extends Node>(child: Node, old: T): T => {
+      const result = origReplaceChild(child, old);
+      fireCallback([child], [old]);
+      patchNewSubtree(child);
+      return result;
+    };
+
+    // Element methods (only if node is an Element)
+    if ("append" in node && typeof node.append === "function") {
+      const origAppend = node.append.bind(node);
+      node.append = (...nodes: (string | Node)[]): void => {
+        origAppend(...nodes);
+        const added = nodes.filter((n): n is Node => n instanceof Node);
+        if (added.length > 0) {
+          fireCallback(added);
+          for (const n of added) {
+            patchNewSubtree(n);
+          }
+        }
+      };
+    }
+
+    if ("prepend" in node && typeof node.prepend === "function") {
+      const origPrepend = node.prepend.bind(node);
+      node.prepend = (...nodes: (string | Node)[]): void => {
+        origPrepend(...nodes);
+        const added = nodes.filter((n): n is Node => n instanceof Node);
+        if (added.length > 0) {
+          fireCallback(added);
+          for (const n of added) {
+            patchNewSubtree(n);
+          }
+        }
+      };
+    }
+
+    if (
+      "insertAdjacentElement" in node &&
+      typeof node.insertAdjacentElement === "function"
+    ) {
+      const origInsertAdjacent = node.insertAdjacentElement.bind(node);
+      node.insertAdjacentElement = (
+        position: InsertPosition,
+        element: Element
+      ): Element | null => {
+        const result = origInsertAdjacent(position, element);
+        if (result) {
+          fireCallback([element]);
+          patchNewSubtree(element);
+        }
+        return result;
+      };
+    }
+  }
+
+  disconnect() {
+    // no-op: mock does not track observed targets
+  }
+
+  takeRecords() {
+    return [];
+  }
+}
+
+g.MutationObserver = TestMutationObserver;
+(happyWindow as unknown as Record<string, unknown>).MutationObserver =
+  TestMutationObserver;
+
+interface MockEventBase {
+  _listeners: unknown[];
+}
+
+interface MockEvent<TCallback extends (...args: any[]) => any>
+  extends MockEventBase {
   _listeners: TCallback[];
   addListener(cb: TCallback): void;
   clearListeners(): void;
   fire(...args: Parameters<TCallback>): Promise<void>;
+  removeListener(cb: TCallback): void;
 }
 
 function createMockEvent<
@@ -41,6 +205,12 @@ function createMockEvent<
     addListener(cb: TCallback) {
       listeners.push(cb);
     },
+    removeListener(cb: TCallback) {
+      const idx = listeners.indexOf(cb);
+      if (idx >= 0) {
+        listeners.splice(idx, 1);
+      }
+    },
     async fire(...args: Parameters<TCallback>) {
       for (const cb of listeners) {
         await (cb as unknown as (...a: unknown[]) => unknown)(...args);
@@ -50,6 +220,51 @@ function createMockEvent<
       listeners.length = 0;
     },
   };
+}
+
+/**
+ * Snapshot the current listeners on all mock events.
+ * Use with `listenerDelta` to isolate listeners registered by a single module.
+ */
+export function snapshotListeners(): Map<MockEventBase, unknown[]> {
+  const snap = new Map<MockEventBase, unknown[]>();
+  for (const group of Object.values(mockEvents)) {
+    for (const event of Object.values(group) as MockEventBase[]) {
+      snap.set(event, [...event._listeners]);
+    }
+  }
+  return snap;
+}
+
+/**
+ * Compute the listeners added between two snapshots (after − before).
+ */
+export function listenerDelta(
+  before: Map<MockEventBase, unknown[]>,
+  after: Map<MockEventBase, unknown[]>
+): Map<MockEventBase, unknown[]> {
+  const delta = new Map<MockEventBase, unknown[]>();
+  for (const [event, afterListeners] of after) {
+    const beforeCount = before.get(event)?.length ?? 0;
+    delta.set(event, afterListeners.slice(beforeCount));
+  }
+  return delta;
+}
+
+/**
+ * Clear all listeners then restore only those in the given snapshot/delta.
+ */
+export function restoreListeners(snap: Map<MockEventBase, unknown[]>): void {
+  // Clear all events first
+  for (const group of Object.values(mockEvents)) {
+    for (const event of Object.values(group) as MockEventBase[]) {
+      event._listeners.length = 0;
+    }
+  }
+  // Restore only the provided listeners
+  for (const [event, listeners] of snap) {
+    event._listeners.push(...listeners);
+  }
 }
 
 // In-memory session storage
