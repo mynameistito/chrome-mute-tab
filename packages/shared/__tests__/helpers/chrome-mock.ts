@@ -88,13 +88,11 @@ class TestMutationObserver {
       });
     };
 
-    const patchNewSubtree = (child: Node) => {
-      if (child.nodeType === 1) {
-        this._patchInsertionMethods(child);
-        for (const c of Array.from(child.childNodes)) {
-          if (c.nodeType === 1) {
-            this._patchInsertionMethods(c);
-          }
+    const patchNewSubtree = (node: Node) => {
+      if (node.nodeType === 1) {
+        this._patchInsertionMethods(node);
+        for (const child of Array.from(node.childNodes)) {
+          patchNewSubtree(child);
         }
       }
     };
@@ -178,8 +176,15 @@ class TestMutationObserver {
 }
 
 g.MutationObserver = TestMutationObserver;
+(happyWindow as unknown as Record<string, unknown>).MutationObserver =
+  TestMutationObserver;
 
-interface MockEvent<TCallback extends (...args: any[]) => any> {
+interface MockEventBase {
+  _listeners: unknown[];
+}
+
+interface MockEvent<TCallback extends (...args: any[]) => any>
+  extends MockEventBase {
   _listeners: TCallback[];
   addListener(cb: TCallback): void;
   clearListeners(): void;
@@ -217,10 +222,10 @@ function createMockEvent<
  * Snapshot the current listeners on all mock events.
  * Use with `listenerDelta` to isolate listeners registered by a single module.
  */
-export function snapshotListeners(): Map<MockEvent<any>, any[]> {
-  const snap = new Map<MockEvent<any>, any[]>();
+export function snapshotListeners(): Map<MockEventBase, unknown[]> {
+  const snap = new Map<MockEventBase, unknown[]>();
   for (const group of Object.values(mockEvents)) {
-    for (const event of Object.values(group) as MockEvent<any>[]) {
+    for (const event of Object.values(group) as MockEventBase[]) {
       snap.set(event, [...event._listeners]);
     }
   }
@@ -231,10 +236,10 @@ export function snapshotListeners(): Map<MockEvent<any>, any[]> {
  * Compute the listeners added between two snapshots (after − before).
  */
 export function listenerDelta(
-  before: Map<MockEvent<any>, any[]>,
-  after: Map<MockEvent<any>, any[]>
-): Map<MockEvent<any>, any[]> {
-  const delta = new Map<MockEvent<any>, any[]>();
+  before: Map<MockEventBase, unknown[]>,
+  after: Map<MockEventBase, unknown[]>
+): Map<MockEventBase, unknown[]> {
+  const delta = new Map<MockEventBase, unknown[]>();
   for (const [event, afterListeners] of after) {
     const beforeCount = before.get(event)?.length ?? 0;
     delta.set(event, afterListeners.slice(beforeCount));
@@ -245,10 +250,10 @@ export function listenerDelta(
 /**
  * Clear all listeners then restore only those in the given snapshot/delta.
  */
-export function restoreListeners(snap: Map<MockEvent<any>, any[]>): void {
+export function restoreListeners(snap: Map<MockEventBase, unknown[]>): void {
   // Clear all events first
   for (const group of Object.values(mockEvents)) {
-    for (const event of Object.values(group) as MockEvent<any>[]) {
+    for (const event of Object.values(group) as MockEventBase[]) {
       event._listeners.length = 0;
     }
   }
