@@ -25,8 +25,15 @@ g.EventTarget = happyWindow.EventTarget;
 g.Event = happyWindow.Event;
 
 // Custom MutationObserver mock — happy-dom's implementation doesn't reliably
-// fire callbacks on Linux CI. This patches appendChild on the observed target
-// so the callback fires via queueMicrotask, matching real browser behaviour.
+// fire callbacks on Linux CI. This patches DOM insertion methods on observed
+// targets so the callback fires via queueMicrotask, matching real browser behaviour.
+//
+// LIMITATIONS:
+// - Only intercepts DOM insertion methods (appendChild, insertBefore, replaceChild,
+//   append, prepend, insertAdjacentElement). Does NOT intercept attribute changes
+//   or characterData mutations.
+// - disconnect() is not implemented because it's never called in this codebase.
+//   If needed in the future, store originals in a Map and restore them.
 class TestMutationObserver {
   private readonly _callback: MutationCallback;
   private readonly _patched: WeakSet<Node> = new WeakSet();
@@ -36,15 +43,13 @@ class TestMutationObserver {
   }
 
   observe(target: Node, options?: MutationObserverInit) {
-    this._patchAppendChild(target);
+    this._patchInsertionMethods(target);
 
     if (options?.subtree) {
-      // Recursively patch all existing descendant elements so appends at any
-      // depth are observed — not just direct children.
       const walk = (node: Node) => {
         for (const child of Array.from(node.childNodes)) {
           if (child.nodeType === 1) {
-            this._patchAppendChild(child);
+            this._patchInsertionMethods(child);
             walk(child);
           }
         }
@@ -53,7 +58,7 @@ class TestMutationObserver {
     }
   }
 
-  private _patchAppendChild(node: Node) {
+  private _patchInsertionMethods(node: Node) {
     if (this._patched.has(node)) {
       return;
     }
@@ -61,17 +66,15 @@ class TestMutationObserver {
 
     const callback = this._callback;
     const observer = this as unknown as MutationObserver;
-    const origAppendChild = node.appendChild.bind(node);
 
-    node.appendChild = <T extends Node>(child: T): T => {
-      const result = origAppendChild(child);
+    const fireCallback = (addedNodes: Node[], removedNodes: Node[] = []) => {
       queueMicrotask(() => {
         callback(
           [
             {
               type: "childList",
-              addedNodes: [child] as unknown as NodeList,
-              removedNodes: [] as unknown as NodeList,
+              addedNodes: addedNodes as unknown as NodeList,
+              removedNodes: removedNodes as unknown as NodeList,
               target: node,
               attributeName: null,
               attributeNamespace: null,
@@ -83,27 +86,92 @@ class TestMutationObserver {
           observer
         );
       });
-      // Patch newly added element nodes and their entire subtree so appends
-      // at any depth are observed.
+    };
+
+    const patchNewSubtree = (child: Node) => {
       if (child.nodeType === 1) {
-        this._patchAppendChild(child);
-        const walkNew = (n: Node) => {
-          for (const c of Array.from(n.childNodes)) {
-            if (c.nodeType === 1) {
-              this._patchAppendChild(c);
-              walkNew(c);
-            }
+        this._patchInsertionMethods(child);
+        for (const c of Array.from(child.childNodes)) {
+          if (c.nodeType === 1) {
+            this._patchInsertionMethods(c);
           }
-        };
-        walkNew(child);
+        }
       }
+    };
+
+    // Node methods
+    const origAppendChild = node.appendChild.bind(node);
+    node.appendChild = <T extends Node>(child: T): T => {
+      const result = origAppendChild(child);
+      fireCallback([child]);
+      patchNewSubtree(child);
       return result;
     };
+
+    const origInsertBefore = node.insertBefore.bind(node);
+    node.insertBefore = <T extends Node>(child: T, ref: Node | null): T => {
+      const result = origInsertBefore(child, ref);
+      fireCallback([child]);
+      patchNewSubtree(child);
+      return result;
+    };
+
+    const origReplaceChild = node.replaceChild.bind(node);
+    node.replaceChild = <T extends Node>(child: Node, old: T): T => {
+      const result = origReplaceChild(child, old);
+      fireCallback([child], [old]);
+      patchNewSubtree(child);
+      return result;
+    };
+
+    // Element methods (only if node is an Element)
+    if ("append" in node && typeof node.append === "function") {
+      const origAppend = node.append.bind(node);
+      node.append = (...nodes: (string | Node)[]): void => {
+        origAppend(...nodes);
+        const added = nodes.filter((n): n is Node => n instanceof Node);
+        if (added.length > 0) {
+          fireCallback(added);
+          for (const n of added) {
+            patchNewSubtree(n);
+          }
+        }
+      };
+    }
+
+    if ("prepend" in node && typeof node.prepend === "function") {
+      const origPrepend = node.prepend.bind(node);
+      node.prepend = (...nodes: (string | Node)[]): void => {
+        origPrepend(...nodes);
+        const added = nodes.filter((n): n is Node => n instanceof Node);
+        if (added.length > 0) {
+          fireCallback(added);
+          for (const n of added) {
+            patchNewSubtree(n);
+          }
+        }
+      };
+    }
+
+    if (
+      "insertAdjacentElement" in node &&
+      typeof node.insertAdjacentElement === "function"
+    ) {
+      const origInsertAdjacent = node.insertAdjacentElement.bind(node);
+      node.insertAdjacentElement = (
+        position: InsertPosition,
+        element: Element
+      ): Element | null => {
+        const result = origInsertAdjacent(position, element);
+        if (result) {
+          fireCallback([element]);
+          patchNewSubtree(element);
+        }
+        return result;
+      };
+    }
   }
 
-  disconnect() {
-    // intentional no-op for mock
-  }
   takeRecords() {
     return [];
   }
