@@ -10,8 +10,8 @@
   ],
   "scripts": {
     "build": "turbo run build",
-    "check": "turbo run check",
-    "fix": "turbo run fix",
+    "check": "ultracite check",
+    "fix": "ultracite fix",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
     "typecheck": "turbo run typecheck",
